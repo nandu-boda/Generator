@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -9,6 +9,13 @@ import { Document, Packer, Paragraph, TextRun } from 'docx';
 const Payslip = () => {
     const location = useLocation();
     const { payslipData } = location.state || {};
+    const [payslipNumber, setPayslipNumber] = useState(payslipData?.payslipNumber || '');
+
+    useEffect(() => {
+        if (payslipData) {
+            setPayslipNumber(payslipData.payslipNumber);
+        }
+    }, [payslipData]);
 
     if (!payslipData) {
         return <div>No payslip data available.</div>;
@@ -16,30 +23,33 @@ const Payslip = () => {
 
     const generatePDF = async () => {
         const input = document.getElementById('payslip');
-
+    
         try {
-            const canvas = await html2canvas(input, { scale: 1.2 });
+            const canvas = await html2canvas(input, { scale: 1.0 }); 
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgWidth = 210 * 1.2; 
+            const imgWidth = 210 * 1.0; 
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             const position = 0;
-
+    
             pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
             const pdfBlob = pdf.output('blob');
             const pdfFileName = `payslip_${payslipData.payslipNumber}.pdf`;
-
-            
+    
+            // Save the PDF in the new uploads directory
             const pdfFile = new File([pdfBlob], pdfFileName, { type: 'application/pdf' });
             const formData = new FormData();
             formData.append('file', pdfFile);
-
-            await fetch('http://localhost:5000/upload', {
+    
+            const response = await fetch('http://localhost:5000/upload', {
                 method: 'POST',
                 body: formData,
             });
-
-            saveAs(pdfBlob, pdfFileName);
+    
+            const result = await response.json();
+            const payslipNumber = result.payslipNumber;
+    
+            saveAs(pdfBlob, `payslip_${payslipNumber}.pdf`);
         } catch (error) {
             console.error('Error generating PDF:', error);
         }
@@ -52,7 +62,7 @@ const Payslip = () => {
                     children: [
                         new Paragraph({
                             children: [
-                                new TextRun(`Payslip No: ${payslipData.payslipNumber}`),
+                                new TextRun(`Payslip No: ${payslipNumber}`),
                                 new TextRun("\n"),
                                 new TextRun(`Employee Name: ${payslipData.employeeName}`),
                                 new TextRun("\n"),
@@ -87,9 +97,9 @@ const Payslip = () => {
 
             const buffer = await Packer.toBuffer(doc);
             const wordBlob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-            const wordFileName = `payslip_${payslipData.payslipNumber}.docx`;
+            const wordFileName = `payslip_${payslipNumber}.docx`;
 
-            
+            // Save the Word document in the new uploads directory
             const wordFile = new File([wordBlob], wordFileName, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             const formData = new FormData();
             formData.append('file', wordFile);
@@ -118,7 +128,7 @@ const Payslip = () => {
         <div id="payslip" className="container-ps" style={{ height: '1000px' }}>
             <div className='head'>
                 <h2>Payslip </h2>
-                <p>No:#{payslipData.payslipNumber}</p>
+                <p>No:#{payslipNumber}</p>
             </div>
             <div className="invoice-header">
                 <div>
@@ -179,6 +189,7 @@ const Payslip = () => {
             <div className="btns">
                 <button id="pdf-button" className="button" onClick={generatePDF} data-html2canvas-ignore>Export to PDF</button>
                 <button id="word-button" className="button" onClick={generateWord} data-html2canvas-ignore>Export to Word</button>
+                
             </div>
         </div>
     );
