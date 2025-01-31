@@ -33,6 +33,12 @@ const getNextPayslipNumber = () => {
   return payslipNumber;
 };
 
+// Route to fetch the next payslip number
+app.get('/next-payslip-number', (req, res) => {
+  const payslipNumber = getNextPayslipNumber();
+  res.json({ payslipNumber });
+});
+
 // Route for file upload
 app.post('/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -45,6 +51,18 @@ app.post('/upload', upload.single('file'), (req, res) => {
     payslipNumber: payslipNumber,
   });
 });
+// Route to search for a payslip by number
+app.get('/search-payslip', (req, res) => {
+  const payslipNumber = req.query.payslipNumber;
+  const filePath = `./uploads/pdf/payslip_${payslipNumber}.pdf`;
+
+  if (fs.existsSync(filePath)) {
+      res.json({ filePath: `/uploads/pdf/payslip_${payslipNumber}.pdf` });
+  } else {
+      res.status(404).json({ error: 'Payslip not found' });
+  }
+});
+
 
 // Serve uploaded files statically
 app.use('/uploads/pdf', express.static('uploads/pdf')); // Update the static folder

@@ -4,18 +4,25 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import './payslip.css';
 import { saveAs } from 'file-saver';
-import { Document, Packer, Paragraph, TextRun } from 'docx';
 
 const Payslip = () => {
     const location = useLocation();
     const { payslipData } = location.state || {};
-    const [payslipNumber, setPayslipNumber] = useState(payslipData?.payslipNumber || '');
+    const [payslipNumber, setPayslipNumber] = useState('');
 
     useEffect(() => {
-        if (payslipData) {
-            setPayslipNumber(payslipData.payslipNumber);
-        }
-    }, [payslipData]);
+        const fetchPayslipNumber = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/next-payslip-number');
+                const result = await response.json();
+                setPayslipNumber(result.payslipNumber);
+            } catch (error) {
+                console.error('Error fetching payslip number:', error);
+            }
+        };
+
+        fetchPayslipNumber();
+    }, []);
 
     if (!payslipData) {
         return <div>No payslip data available.</div>;
@@ -23,105 +30,35 @@ const Payslip = () => {
 
     const generatePDF = async () => {
         const input = document.getElementById('payslip');
-    
+
         try {
-            const canvas = await html2canvas(input, { scale: 1.0 }); 
+            // Generate the PDF with the current payslip number
+            const canvas = await html2canvas(input, { scale: 1.2, backgroundColor: null }); // Scale the canvas to 120% and set background color to null
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgWidth = 210 * 1.0; 
+            const imgWidth = 200; 
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             const position = 0;
-    
+
             pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
             const pdfBlob = pdf.output('blob');
-            const pdfFileName = `payslip_${payslipData.payslipNumber}.pdf`;
-    
+            const pdfFileName = `payslip_${payslipNumber}.pdf`;
+
             // Save the PDF in the new uploads directory
             const pdfFile = new File([pdfBlob], pdfFileName, { type: 'application/pdf' });
             const formData = new FormData();
             formData.append('file', pdfFile);
-    
-            const response = await fetch('http://localhost:5000/upload', {
-                method: 'POST',
-                body: formData,
-            });
-    
-            const result = await response.json();
-            const payslipNumber = result.payslipNumber;
-    
-            saveAs(pdfBlob, `payslip_${payslipNumber}.pdf`);
-        } catch (error) {
-            console.error('Error generating PDF:', error);
-        }
-    };
-
-    const generateWord = async () => {
-        try {
-            const doc = new Document({
-                sections: [{
-                    children: [
-                        new Paragraph({
-                            children: [
-                                new TextRun(`Payslip No: ${payslipNumber}`),
-                                new TextRun("\n"),
-                                new TextRun(`Employee Name: ${payslipData.employeeName}`),
-                                new TextRun("\n"),
-                                new TextRun(`Employee ID: ${payslipData.employeeId}`),
-                                new TextRun("\n"),
-                                new TextRun(`Date: ${new Date().toLocaleDateString()}`),
-                                new TextRun("\n"),
-                                new TextRun(`Basic Pay: ${payslipData.basicPay}`),
-                                new TextRun("\n"),
-                                new TextRun(`Allowances: ${payslipData.allowances}`),
-                                new TextRun("\n"),
-                                new TextRun(`Overtime: ${payslipData.overtime}`),
-                                new TextRun("\n"),
-                                new TextRun(`Bonuses: ${payslipData.bonuses}`),
-                                new TextRun("\n"),
-                                new TextRun(`Total: ${parseFloat(payslipData.basicPay) + parseFloat(payslipData.allowances) + parseFloat(payslipData.overtime) + parseFloat(payslipData.bonuses)}`),
-                                new TextRun("\n"),
-                                new TextRun(`Company Name`),
-                                new TextRun("\n"),
-                                new TextRun(`Address Line 1`),
-                                new TextRun("\n"),
-                                new TextRun(`Address Line 2`),
-                                new TextRun("\n"),
-                                new TextRun(`Email: ${payslipData.email}`),
-                                new TextRun("\n"),
-                                new TextRun(`Phone: ${payslipData.phoneNo}`),
-                            ],
-                        }),
-                    ],
-                }],
-            });
-
-            const buffer = await Packer.toBuffer(doc);
-            const wordBlob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-            const wordFileName = `payslip_${payslipNumber}.docx`;
-
-            // Save the Word document in the new uploads directory
-            const wordFile = new File([wordBlob], wordFileName, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-            const formData = new FormData();
-            formData.append('file', wordFile);
 
             await fetch('http://localhost:5000/upload', {
                 method: 'POST',
                 body: formData,
             });
 
-            saveAs(wordBlob, wordFileName);
+            // Download the PDF
+            saveAs(pdfBlob, pdfFileName);
         } catch (error) {
-            console.error('Error generating Word document:', error);
+            console.error('Error generating PDF:', error);
         }
-    };
-
-    const printPayslip = () => {
-        const printContent = document.getElementById('payslip').innerHTML;
-        const originalContent = document.body.innerHTML;
-
-        document.body.innerHTML = printContent;
-        window.print();
-        document.body.innerHTML = originalContent;
     };
 
     return (
@@ -188,8 +125,7 @@ const Payslip = () => {
             </div>
             <div className="btns">
                 <button id="pdf-button" className="button" onClick={generatePDF} data-html2canvas-ignore>Export to PDF</button>
-                <button id="word-button" className="button" onClick={generateWord} data-html2canvas-ignore>Export to Word</button>
-                
+                <button id="word-button" className="button" data-html2canvas-ignore>Export to Word</button>
             </div>
         </div>
     );

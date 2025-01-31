@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './payslipForm.css';
 
+
 const PayslipForm = () => {
     const [employeeName, setEmployeeName] = useState('');
     const [employeeId, setEmployeeId] = useState('');
@@ -37,6 +38,9 @@ const PayslipForm = () => {
         };
         navigate('/payslip', { state: { payslipData } });
     };
+    const ViewPayslip = ()=> {
+        navigate ('./viewPayslip');
+    }
 
     const resetForm = () => {
         setEmployeeId('');
@@ -47,6 +51,7 @@ const PayslipForm = () => {
         setOvertime('');
         setBonuses('');
     };
+    
 
     return (
         <div className='container'>
@@ -143,6 +148,7 @@ const PayslipForm = () => {
                 <div className="buttons">
                     <button type="submit" className="button">Submit</button>
                     <button type="button" className="button" onClick={resetForm}>Reset</button>
+                    <button type='button' onClick={ViewPayslip}>View Your Payslip</button>
                 </div>
             </form>
         </div>
