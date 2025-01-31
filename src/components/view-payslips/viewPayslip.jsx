@@ -1,23 +1,34 @@
 import React, { useState } from 'react';
 import './viewPayslip.css';
-
 const ViewPayslips = () => {
     const [payslipNumber, setPayslipNumber] = useState('');
     const [payslipUrl, setPayslipUrl] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleSearch = async () => {
+        if (!payslipNumber.trim()) {
+            setError("Please enter a valid payslip number.");
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+        setPayslipUrl('');
+
         try {
-            const response = await fetch(`http://localhost:5000/search-payslip?payslipNumber=${payslipNumber}`);
+            const response = await fetch(`http://localhost:5000/viewPayslip?payslipNumber=${payslipNumber}`);
+
             if (!response.ok) {
                 throw new Error('Payslip not found');
             }
+
             const result = await response.json();
             setPayslipUrl(result.filePath);
-            setError('');
         } catch (error) {
             setError(error.message);
-            setPayslipUrl('');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -30,12 +41,18 @@ const ViewPayslips = () => {
                 value={payslipNumber}
                 onChange={(e) => setPayslipNumber(e.target.value)}
             />
-            <button onClick={handleSearch}>Search</button>
+            <button onClick={handleSearch} disabled={loading}>
+                {loading ? 'Searching...' : 'Search'}
+            </button>
+
             {error && <p className="error">{error}</p>}
+
             {payslipUrl && (
                 <div className="payslip-result">
                     <p>Payslip found:</p>
-                    <a href={payslipUrl} target="_blank" rel="noopener noreferrer">View Payslip</a>
+                    <a href={payslipUrl} target="_blank" rel="noopener noreferrer">
+                        View Payslip
+                    </a>
                 </div>
             )}
         </div>

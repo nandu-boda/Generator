@@ -30,37 +30,47 @@ const Payslip = () => {
 
     const generatePDF = async () => {
         const input = document.getElementById('payslip');
-
+    
         try {
-            // Generate the PDF with the current payslip number
-            const canvas = await html2canvas(input, { scale: 1.2, backgroundColor: null }); // Scale the canvas to 120% and set background color to null
+            // Fetch the next payslip number from the backend
+            const response = await fetch('http://localhost:5000/next-payslip-number');
+            const data = await response.json();
+            const payslipNumber = data.payslipNumber; // Get payslip number from the server
+    
+            // Convert the payslip element to an image
+            const canvas = await html2canvas(input, { scale: 1.2, backgroundColor: null });
             const imgData = canvas.toDataURL('image/png');
+            
+            // Create PDF
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgWidth = 200; 
+            const imgWidth = 200;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             const position = 0;
-
+    
             pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    
+            
             const pdfBlob = pdf.output('blob');
             const pdfFileName = `payslip_${payslipNumber}.pdf`;
-
-            // Save the PDF in the new uploads directory
+    
+            
             const pdfFile = new File([pdfBlob], pdfFileName, { type: 'application/pdf' });
             const formData = new FormData();
             formData.append('file', pdfFile);
-
+    
+           
             await fetch('http://localhost:5000/upload', {
                 method: 'POST',
                 body: formData,
             });
-
-            // Download the PDF
+    
             saveAs(pdfBlob, pdfFileName);
+            console.log('PDF successfully uploaded and saved:', pdfFileName);
         } catch (error) {
             console.error('Error generating PDF:', error);
         }
     };
-
+    
     return (
         <div id="payslip" className="container-ps" style={{ height: '1000px' }}>
             <div className='head'>

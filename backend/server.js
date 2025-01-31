@@ -6,20 +6,27 @@ import fs from 'fs';
 
 const app = express();
 
-app.use(cors()); // Enable CORS for frontend requests
+app.use(cors());
 
-// Set storage engine
+
+const uploadDir = './uploads/pdf';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+
 const storage = multer.diskStorage({
-  destination: './uploads/pdf', // Change the destination folder
+  destination: uploadDir, 
   filename: (req, file, cb) => {
-    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+    cb(null, file.originalname);
   },
+  
 });
 
-// Initialize upload
+
 const upload = multer({ storage });
 
-// Function to get the next payslip number
+
 const getNextPayslipNumber = () => {
   const counterFile = './counter.txt';
   let payslipNumber = 1;
@@ -33,40 +40,40 @@ const getNextPayslipNumber = () => {
   return payslipNumber;
 };
 
-// Route to fetch the next payslip number
+
 app.get('/next-payslip-number', (req, res) => {
   const payslipNumber = getNextPayslipNumber();
   res.json({ payslipNumber });
 });
 
-// Route for file upload
 app.post('/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   const payslipNumber = getNextPayslipNumber();
+  const filePath = `/uploads/pdf/${req.file.filename}`;
 
   res.json({
     message: 'File uploaded successfully',
-    filePath: `/uploads/pdf/${req.file.filename}`,
-    payslipNumber: payslipNumber,
+    filePath,
+    payslipNumber,
   });
 });
-// Route to search for a payslip by number
-app.get('/search-payslip', (req, res) => {
+
+app.get('/viewPayslip', (req, res) => {
   const payslipNumber = req.query.payslipNumber;
   const filePath = `./uploads/pdf/payslip_${payslipNumber}.pdf`;
 
   if (fs.existsSync(filePath)) {
-      res.json({ filePath: `/uploads/pdf/payslip_${payslipNumber}.pdf` });
+    res.json({ filePath: `http://localhost:5000/uploads/pdf/payslip_${payslipNumber}.pdf` }); // Return absolute URL
   } else {
-      res.status(404).json({ error: 'Payslip not found' });
+    res.status(404).json({ error: 'Payslip Not Found' });
   }
 });
 
 
-// Serve uploaded files statically
-app.use('/uploads/pdf', express.static('uploads/pdf')); // Update the static folder
 
-// Start server
+app.use('/uploads/pdf', express.static(uploadDir));
+
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
