@@ -96,3 +96,8 @@ body {
 .btns button:hover {
     opacity: 0.5;
 }
+@media print {
+    .btns {
+        display: none;
+    }
+}

@@ -1,7 +1,7 @@
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
-    background-color: #f4f4f4;
+    
     overflow: hidden;
 } 
 
@@ -39,7 +39,7 @@ h1 {
 
 .form-row {
     display: flex;
-   
+   background-color: #91C4F2;
     justify-content: space-between;
     margin-bottom: 20px;
 }
